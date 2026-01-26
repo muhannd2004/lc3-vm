@@ -1,20 +1,34 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
 #include <termios.h>
+#include <sys/select.h>
 
 #include "lc3.h"
+#include "memory.h"
+#include "input.h"
 
-uint16_t memory[MEMORY_MAX];
 
 uint16_t reg[R_COUNT];
 
-struct termios original_tio;
 
-void restore_input_buffering();
-void disable_input_buffering();
-void handle_interrupt(int signal);
+
+
 int read_image(const char* image_path);
+void read_image_file(FILE *file);
+
+uint16_t sign_extend(uint16_t x, int bit_count);
+uint16_t swap16(uint16_t x);
+
+void update_flags(uint16_t r);
+
+void add_operation(uint16_t instr);
+void and_operation(uint16_t instr);
+void not_operation(uint16_t instr);
+void ldi_operation(uint16_t instr);
+void branch_operation(uint16_t instr);
+void jmp_operation(uint16_t instr);
 
 int main(int argc, const char* argv[]){
 
@@ -38,9 +52,82 @@ int main(int argc, const char* argv[]){
     signal(SIGINT, handle_interrupt);
     disable_input_buffering();
 
+    /* 0x3000 is the deafult starting postions */
+    enum {PC_START = 0x3000};
 
+    reg[R_PC] = PC_START;
+
+    int running = 1;
+
+    while (running)
+    {
+        uint16_t instr = mem_read(reg[R_PC]++);
+        uint16_t op = instr >> 12;
+
+              switch (op)
+        {
+            case OP_ADD:
+                add_operation(instr);
+                break;
+            case OP_AND:
+                and_operation(instr);
+                break;
+            case OP_NOT:
+                not_operation(instr);
+                break;
+            case OP_BR:
+                branch_operation(instr);
+                break;
+            case OP_JMP:
+                jmp_operation(instr);
+                break;
+            case OP_JSR:
+                //JSR}
+                break;
+            case OP_LD:
+                //LD}
+                break;
+            case OP_LDI:
+                //LDI}
+                break;
+            case OP_LDR:
+                //LDR}
+                break;
+            case OP_LEA:
+                //LEA}
+                break;
+            case OP_ST:
+                //ST}
+                break;
+            case OP_STI:
+                //STI}
+                break;
+            case OP_STR:
+                //STR}
+                break;
+            case OP_TRAP:
+                //TRAP}
+                break;
+            case OP_RES:
+            case OP_RTI:
+            default:
+                abort();
+                break;
+        }
+    }
+    
     
     return 0;
+}
+
+uint16_t sign_extend(uint16_t x, int bit_count){
+
+    if (x & ( 1u << (bit_count - 1)))
+    {   
+        x |= (0xFFFF << bit_count);
+    }
+
+    return x;
 }
 
 uint16_t swap16(uint16_t x){
@@ -75,22 +162,92 @@ void read_image_file(FILE *file){
     
 }
 
-
-void disable_input_buffering(){
-    tcgetattr(STDIN_FILENO, &original_tio);
-    struct termios new_tio = original_tio;
-
-    new_tio.c_lflag &= ~ICANON & ~ECHO;
-    tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
+void update_flags(uint16_t r){
+    if (reg[r] == 0)
+    {
+        reg[R_COND] = FL_ZRO;
+    }
+    else if (reg[r] >> 15) /* a 1 in the left-most bit indicates negative */
+    {
+        reg[R_COND] = FL_NEG;
+    }
+    else
+    {
+        reg[R_COND] = FL_POS;
+    }
 }
 
-void restore_input_buffering(){
-    tcsetattr(STDIN_FILENO, TCSANOW, &original_tio);
+
+void add_operation(uint16_t instr){
+
+    uint16_t rd = (instr >> 9) & 0x7;
+    uint16_t rs1 = (instr >> 6) & 0x7;
+
+    if ((instr >> 5) & 0x1)
+    {
+        reg[rd] = rs1 + sign_extend(instr & 0x1F, 5);
+    }else{
+        uint16_t i_rs2 = instr & 0x7;
+        reg[rd] = reg[rs1] + reg[i_rs2];
+    }
+
+    update_flags(rd);
+    
+}
+
+void and_operation(uint16_t instr){
+    
+    uint16_t rd = (instr >> 9) & 0x7;
+    uint16_t rs1 = (instr >> 6) & 0x7;
+
+    if ((instr >> 5) & 0x1)
+    {
+        reg[rd] = rs1 & sign_extend(instr & 0x1F, 5);
+    }else{
+        uint16_t i_rs2 = instr & 0x7;
+        reg[rd] = reg[rs1] & reg[i_rs2];
+    }
+
+    update_flags(rd);
+}
+
+void not_operation(uint16_t instr){
+    uint16_t rd = (instr >> 9) & 0x7;
+    uint16_t rs1 = (instr >> 6) & 0x7;
+
+    reg[rd] = reg[rs1];
+
+    update_flags(rd);
+}
+
+void ldi_operation(uint16_t instr){
+
+    uint16_t rd = (instr >> 9) & 0x7;
+    uint16_t offset = sign_extend(instr & 0x1FF, 9);
+    
+    reg[rd] = mem_read(mem_read(reg[R_PC] + offset));
+
+    update_flags(rd);
 }
 
 
-void handle_interrupt(int signal){
-    restore_input_buffering();
-    printf("\n");
-    exit(-2);
+void branch_operation(uint16_t instr){
+
+    uint16_t cond = (instr >> 9) & 0x7; 
+    
+    if (cond & reg[R_COND])
+    {
+        uint16_t offset = sign_extend(instr & 0x1FF, 9); 
+        reg[R_PC] += offset;
+    }
+        
 }
+
+
+void jmp_operation(uint16_t instr){
+
+    uint16_t base_r = (instr >> 6) & 0x7;
+
+    reg[R_PC] = reg[base_r];
+}
+

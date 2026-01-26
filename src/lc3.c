@@ -1,5 +1,4 @@
-#include "lc3.h"
-#include <stdint.h>
+
 
 int lc3(){
 
