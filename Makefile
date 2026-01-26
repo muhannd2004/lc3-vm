@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Iinclude
 
-bin/lc3: src/main.c src/memory.c src/input.c
+bin/lc3: src/main.c src/memory.c src/input.c src/trap.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean: 
