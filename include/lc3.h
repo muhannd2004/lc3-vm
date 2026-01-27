@@ -2,6 +2,10 @@
 #define LC3_H
 
 #include <stdint.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <sys/time.h>
+#include <sys/types.h>
 
 #define MEMORY_MAX (1 << 16)
 

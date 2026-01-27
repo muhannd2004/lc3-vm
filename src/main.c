@@ -32,7 +32,7 @@ void store_operation(uint16_t instr);
 void store_indirect_operation(uint16_t instr);
 void store_reg_operation(uint16_t instr);
 
-int main(int argc, const char* argv[]){
+void main(int argc, const char* argv[]){
 
     /* argument handling */
     if(argc < 2){
@@ -118,8 +118,7 @@ int main(int argc, const char* argv[]){
         }
     }
     
-    
-    return 0;
+    restore_input_buffering();
 }
 
 
@@ -174,7 +173,7 @@ void add_operation(uint16_t instr){
 
     if ((instr >> 5) & 0x1)
     {
-        reg[rd] = rs1 + sign_extend(instr & 0x1F, 5);
+        reg[rd] = reg[rs1] + sign_extend(instr & 0x1F, 5);
     }else{
         uint16_t i_rs2 = instr & 0x7;
         reg[rd] = reg[rs1] + reg[i_rs2];
@@ -191,7 +190,7 @@ void and_operation(uint16_t instr){
 
     if ((instr >> 5) & 0x1)
     {
-        reg[rd] = rs1 & sign_extend(instr & 0x1F, 5);
+        reg[rd] = reg[rs1] & sign_extend(instr & 0x1F, 5);
     }else{
         uint16_t i_rs2 = instr & 0x7;
         reg[rd] = reg[rs1] & reg[i_rs2];
@@ -205,7 +204,7 @@ void not_operation(uint16_t instr){
     uint16_t rd = (instr >> 9) & 0x7;
     uint16_t rs1 = (instr >> 6) & 0x7;
 
-    reg[rd] = reg[rs1];
+    reg[rd] = ~reg[rs1];
 
     update_flags(rd);
 }
