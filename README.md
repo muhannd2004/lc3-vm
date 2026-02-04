@@ -25,7 +25,6 @@ LC-3 is a 16-bit educational computer architecture. This VM emulates its CPU by 
 ## Build & Run
 
 ```bash
-//Step 1: compile .c → .o
 make clean
 
 make
