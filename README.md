@@ -37,13 +37,6 @@ make
 
 ```
 
-### Quick Test (2048)
-
-```bash
-./bin/lc3 ./img/2048.obj
-```
-
-![2048 test](readme_img/2048.png)
 
 ## References
 - https://www.rodrigoaraujo.me/posts/lets-build-an-lc-3-virtual-machine/
